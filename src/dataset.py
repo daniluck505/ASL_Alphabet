@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 
 class ASLDataset(torch.utils.data.Dataset):
-    def __init__(self, train_path,test_path=None, transforms=None, imsize=64):
+    def __init__(self, train_path, test_path=None, transforms=None, imsize=64):
         self.root = train_path
         self.classes = {}
         self.image = []

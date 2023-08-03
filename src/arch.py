@@ -58,7 +58,7 @@ class ResStack(nn.Module):
         return self.blocks(x)
 
 
-class Net(nn.Module):
+class ResNet(nn.Module):
     def __init__(self, in_nc, nc, out_nc, num_blocks, block_type):
         super().__init__()
         self.conv0 = nn.Conv2d(in_nc, nc, 3, padding=1)
