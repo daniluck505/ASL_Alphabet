@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import os
 import yaml
 from tqdm import tqdm
+from datetime import datetime
 
 import torch
 import torch.nn as nn
@@ -14,41 +15,44 @@ from torch.cuda.amp import autocast, GradScaler
 from dataset import ASLDataset
 from arch import ResNet
 
-options_path = 'config.yml'
+options_path = 'src/config.yml'
 with open(options_path, 'r') as f:
   options = yaml.safe_load(f)
 
 
-if options['colab']:
-    from google.colab import files
-    os.system('pip install kaggle')
+torch.backends.cudnn.benchmark = options['train']['benchmark']
+torch.backends.cudnn.deterministic = options['train']['deterministic']
+
+def main():
+    if not (os.path.exists(options['dataset']['train_path']) and os.path.exists(options['dataset']['test_path'])):
+        download_data()
+    train_loader, test_loader = make_dataloder()
+    
+    model = make_model()
+    model = model.to(options['device'])  
+      
+    scaler = GradScaler()
+    loss_function = nn.CrossEntropyLoss()
+    loss_function = loss_function.to(options['device'])
+    optimizer = make_optimizer(model.parameters())
+    
+    loss_history, acc_history, test_history = train_model(model, optimizer, loss_function, scaler, train_loader, test_loader)
+    save_results(model, loss_history, acc_history, test_history)
+    
+
+def download_data():
+    if options['colab']:
+        os.system('pip install kaggle')
     if 'kaggle.json' not in os.listdir():
-        files.upload()
+        raise Exception(f'kaggle.json not found')    
     os.system('mkdir -p ~/.kaggle')
     os.system('cp kaggle.json ~/.kaggle/')
     os.system('chmod 600 ~/.kaggle/kaggle.json')
     os.system('kaggle datasets download "grassknoted/asl-alphabet"')
     os.system('unzip "asl-alphabet.zip"')
 
-torch.backends.cudnn.benchmark = options['train']['benchmark']
-torch.backends.cudnn.deterministic = options['train']['deterministic']
-
-def main():
-    train_loader, test_loader = make_dataloder()
-    
-    model = make_model()
-    model = model.to(options['device'])
-    
-    scaler = GradScaler()
-    loss_function = nn.CrossEntropyLoss()
-    loss_function = loss_function.to(options['device'])
-    optimizer = make_optimizer(model.parameters())
-
-    loss_history, acc_history, test_history = train_model(model, optimizer, loss_function, scaler, train_loader, test_loader)
-    
-
 def make_dataloder():
-    if options['transforms']:
+    if options['dataset']['transforms']:
         tfs = tv.transforms.Compose([
         tv.transforms.ColorJitter(hue=.50, saturation=.50),
         tv.transforms.RandomRotation(60),
@@ -146,6 +150,20 @@ def accuracy(pred, label):
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+def save_results(model, loss_history, acc_history, test_history):
+    if not os.path.exists(f'{options["name"]}'):
+        os.system(f'mkdir {options["name"]}')
+    now = datetime.now()
+    now = str(now).split('.')[0].replace(' ','_' )
+    name = f'{options["network"]["arch"]}_{now}'
+    torch.save(model.state_dict(), f'{name}_.pt') 
+
+    with open(f'{name}_results.txt', 'w') as f:
+        f.write(f'loss_history: {str(loss_history)}')
+        f.write(f'acc_history: {str(acc_history)}')
+        f.write(f'test_history: {str(test_history)}')
+        f.write(str(options))
 
 if __name__ == '__main__':
     main()
