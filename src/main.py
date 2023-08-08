@@ -86,6 +86,9 @@ def make_model():
         raise NotImplementedError(f'architecture {params["arch"]} is not implemented')
     print(count_parameters(model))
     
+    if options['train']['add_train']:
+        model.load_state_dict(torch.load(options['network']['weights'], 
+                                         map_location=options['device']))
     return model
 
 def make_optimizer(model_params):
@@ -159,11 +162,11 @@ def save_results(model, loss_history, acc_history, test_history):
     name = f'{options["network"]["arch"]}_{now}'
     torch.save(model.state_dict(), f'{name}_.pt') 
 
-    with open(f'{name}_results.txt', 'w') as f:
-        f.write(f'loss_history: {str(loss_history)}')
-        f.write(f'acc_history: {str(acc_history)}')
-        f.write(f'test_history: {str(test_history)}')
-        f.write(str(options))
+    with open(f'{options["name"]}/{name}_results.txt', 'w') as f:
+        f.writelines(f'loss_history: {str(loss_history)}')
+        f.writelines(f'acc_history: {str(acc_history)}')
+        f.writelines(f'test_history: {str(test_history)}')
+        f.writelines(str(options))
 
 if __name__ == '__main__':
     main()

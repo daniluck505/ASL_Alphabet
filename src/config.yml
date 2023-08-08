@@ -17,6 +17,7 @@ network:
   in_nc: 3
   nc: 4
   out_nc: 29
+  weights: 'link'
 
 optimizer:
   name: adam
@@ -25,6 +26,7 @@ optimizer:
   beta2: 0.999
 
 train:
+  add_train: False
   benchmark: True
   deterministic: False
   epochs: 1
